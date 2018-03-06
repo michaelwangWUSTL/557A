@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>D3 Test</title>
+        <script type="text/javascript" src="http://d3js.org/d3.v4.min.js"></script>
+    </head>
+	<style>
+	</style>
+    <body>
+        <script type="text/javascript">
+				var svgContainer = d3.select("body").append("svg")
+									.attr("width", 1000)
+									.attr("height", 800);
+									// Create scale
+				var xScale = d3.scaleLinear()
+							   .domain([1940, 2016])
+							   .range([50, 950]);
+
+				// Add scales to axis
+				var x_axis = d3.axisBottom()
+							   .scale(xScale)
+							   .tickValues(d3.range(1940, 2017, 4))
+							   .tickFormat(d3.format("d"));
+			    //d3.select("body").attr("align","center");
+
+				//Append group and insert axis
+				svgContainer.append("g")
+				   .attr("id", "xaxis")
+				   .call(x_axis)
+				   .attr("transform", "translate(0, " + (700) + ")");
+				d3.selectAll(".tick text")
+				  .on("click", onClick)
+				  .style("font-size", "15px")
+				  .attr("transform"," translate(0,10)");
+				var selectedTick = d3.selectAll(".tick text").nodes()[0];
+				d3.select(selectedTick).style("fill", "magenta").style("text-decoration", "underline");
+				
+				d3.csv("/data/yearwise-winner.csv", function(yearwiseWinner) {
+					var ticks = d3.select("#xaxis").selectAll(".tick");
+					ticks.each(function() { 
+						if (yearwiseWinner[(parseInt(this.textContent)-1940)/4].PARTY == "D") {
+							d3.select(this).append("circle").attr("r", 7).style("fill", "blue"); 
+							}
+						if (yearwiseWinner[(parseInt(this.textContent)-1940)/4].PARTY == "R") {
+							d3.select(this).append("circle").attr("r", 7).style("fill", "red"); 
+							}
+						});
+					ticks.selectAll("line").remove();
+				});
+
+				/*
+				var defs = svgContainer.append("defs");
+				var linearGradient = defs.append("linearGradient")
+										 .attr("id", "linear-gradient");
+				
+				linearGradient
+					.attr("x1", "0%")
+					.attr("y1", "0%")
+					.attr("x2", "100%")
+					.attr("y2", "0%");
+				linearGradient.append("stop")
+					.attr("offset", "0%")
+					.attr("stop-color", "#0000ff");
+				linearGradient.append("stop")
+					.attr("offset", "100%")
+					.attr("stop-color", "#FF0000");
+					
+				linearGradient.append("stop")
+					.attr("offset", "8.33%");
+				linearGradient.append("stop")
+					.attr("offset", "16.67%");
+				linearGradient.append("stop")
+					.attr("offset", "25%");
+				linearGradient.append("stop")
+					.attr("offset", "33.33%");
+				linearGradient.append("stop")
+					.attr("offset", "41.67%");
+				linearGradient.append("stop")
+					.attr("offset", "50%");
+				linearGradient.append("stop")
+					.attr("offset", "58.33%");
+				linearGradient.append("stop")
+					.attr("offset", "66.67%");
+				linearGradient.append("stop")
+					.attr("offset", "75%");
+				linearGradient.append("stop")
+					.attr("offset", "83.33%");
+				linearGradient.append("stop")
+					.attr("offset", "91.67%");
+				linearGradient.append("stop")
+					.attr("offset", "100%");*/
+					
+				svgContainer.append("rect")
+					.attr("width", 300)
+					.attr("height", 20)
+					.style("fill", "url(#linear-gradient)");
+				var hovering = d3.select("body").append("div")	
+							.attr("class", "tooltip")				
+							.style("opacity", 0);
+				d3.csv("/data/coordinates.csv", function(coordinateMap) {
+					d3.csv("/data/election-results-" + selectedTick.textContent + ".csv", function(electionData) {
+						console.log("reached");
+						d3.csv("/data/colors.csv", function(colors) {
+							console.log(colors);
+							svgContainer.selectAll(".rect")
+								.data(colors)
+								.enter()
+								.append("rect")
+								.attr("x", function(state) {return (state.index*49).toString()})
+								.attr("y", 630)
+								.attr("width", 48)
+								.attr("height", 20)
+								.attr("fill", function(state) {return (state.color).toString()})
+								.attr("pointer-events", "none");
+							svgContainer.selectAll(".text")
+								.data(colors)
+								.enter()
+								.append("text")
+								.attr("x", function(state) {return (24+state.index*49).toString()})
+								.attr("y", 660)
+								.attr("dy", "0em")
+								.attr('text-anchor', 'middle')
+								.text(function(state) {return state.p1 + "% to " + state.p2 + "%"})
+								.style("fill", "Black")
+								.attr("pointer-events", "none")
+								.style("font", "8px sans-serif");
+				electionData.forEach(function(state) {
+							var result = coordinateMap.filter(function(stateCode) {
+								return stateCode.code == state.Abbreviation;
+							});
+							state.x = (result[0]!== undefined) ? result[0].x : null;
+							state.y = (result[0]!== undefined) ? result[0].y : null;
+						});
+						var g = svgContainer.selectAll(".g")
+											.data(electionData)
+											.enter()
+											.append("g")
+											.attr("transform", translateG);
+						
+						function translateG(state) {
+							//console.log(state.State + " " + "translate(" + (80+70*state.x).toString() + "," + (40+60*state.y).toString() + ")" + counter);
+							return "translate(" + (80+70*state.x).toString() + "," + (40+60*state.y).toString() + ")";
+						}
+						g.append("rect").attr("x", 0)
+											.attr("y", 0)
+											.attr("width", 65)
+											.attr("height", 55)
+											.attr("fill", function(state) {
+												var dif = state.R_Percentage-state.D_Percentage
+												for (i =0; i<20; i++) {
+													if (dif>=colors[i].p1 && dif < colors[i].p2) {
+														return colors[i].color;
+													}
+												}
+												/*if (state.D_Percentage>state.R_Percentage) {
+													return "Blue";
+												}
+												else if (state.D_Percentage<state.R_Percentage)	{
+													return "Red";
+												}
+												else {
+													return "Magenta";
+												}
+												*/
+											});
+						g.append("text")
+						.attr("x", 32.5)
+						.attr("y", 27.5)
+						.attr("dy", "0em")
+						.attr('text-anchor', 'middle')
+						.text(function(state) {return state.Abbreviation})
+						.style("fill", "white")
+						.attr("pointer-events", "none");
+						g.append("text")
+						.attr("x", 32.5)
+						.attr("y", 27.5)
+						.attr("dy", "1em")
+						.attr('text-anchor', 'middle')
+						.text(function(state) {return state.Total_EV})
+						.style("fill", "white")
+						.attr("pointer-events", "none");
+						g.selectAll("rect")
+							.on("mouseenter", function(state) {
+								hovering
+								.style("position", "absolute")
+								.style("background", "lightsteelblue")
+								.style("opacity", .9)
+								.style("width", "230px")
+								.style("height", "60px")
+								.style("text-align", "center")
+								.style("border-radius", "8px")
+								.style("border", "0px")
+								.style("font", "12px sans-serif");
+									var matrix = this.getScreenCTM()
+													.translate(+ this.getAttribute("cx"), + this.getAttribute("cy"));
+								hovering	
+								.html(state.State + " (" + state.Total_EV + " EV) <br>" + state.D_Nominee + ":" + state.D_Votes + "(" + state.D_Percentage + "%) <br>" + state.R_Nominee +  ":" + state.R_Votes + "(" + state.R_Percentage + "%)")	
+								.style("left", (window.pageXOffset + matrix.e) +"px")		
+								.style("top", (window.pageYOffset + matrix.f) + 65 + "px");	
+							})
+							.on("mouseleave", function(d) {		
+							hovering		
+								.style("opacity", 0);	
+						});
+						
+											
+												 /*
+						var states = svgContainer.selectAll("rect")
+												 .data(electionData)
+												 .enter()
+												 .append("rect");
+												
+						var stateAttributes = states
+												.attr("x", function(state) {return 80+70*state.x})
+												.attr("y", function(state) {return 40+60*state.y})
+												.attr("width", 65)
+												.attr("height", 55)
+												.attr("fill", function(state) {
+													if (state.D_Percentage>state.R_Percentage) {
+														return "Blue";
+													}
+													else if (state.D_Percentage<state.R_Percentage)	{
+														return "Red";
+													}
+													else {
+														return "Magenta";
+													}
+												});
+												*/
+						console.log(electionData);
+										});
+					});
+				}); 
+				function onClick(tick) {
+					svgContainer.selectAll("rect").remove();
+					d3.selectAll(".tick text").style("fill", "black").style("text-decoration", null);
+					d3.select(this).style("fill", "magenta").style("text-decoration", "underline");
+					selectedTick = this;
+					console.log(selectedTick.textContent);
+					d3.csv("/data/coordinates.csv", function(coordinateMap) {
+						d3.csv("/data/election-results-" + selectedTick.textContent + ".csv", function(electionData) {
+							console.log("reached");
+							d3.csv("/data/colors.csv", function(colors) {
+							console.log(colors);
+							svgContainer.selectAll(".rect")
+								.data(colors)
+								.enter()
+								.append("rect")
+								.attr("x", function(state) {return (state.index*49).toString()})
+								.attr("y", 630)
+								.attr("width", 48)
+								.attr("height", 20)
+								.attr("fill", function(state) {return (state.color).toString()})
+								.attr("pointer-events", "none");
+							electionData.forEach(function(state) {
+								var result = coordinateMap.filter(function(stateCode) {
+									return stateCode.code == state.Abbreviation;
+								});
+								state.x = (result[0]!== undefined) ? result[0].x : null;
+								state.y = (result[0]!== undefined) ? result[0].y : null;
+							});
+							
+													var g = svgContainer.selectAll(".g")
+											.data(electionData)
+											.enter()
+											.append("g")
+											.attr("transform", translateG);
+						
+						function translateG(state) {
+							//console.log(state.State + " " + "translate(" + (80+70*state.x).toString() + "," + (40+60*state.y).toString() + ")" + counter);
+							return "translate(" + (80+70*state.x).toString() + "," + (40+60*state.y).toString() + ")";
+						}
+						g.append("rect").attr("x", 0)
+											.attr("y", 0)
+											.attr("width", 65)
+											.attr("height", 55)
+											.attr("fill", function(state) {
+											var dif = state.R_Percentage-state.D_Percentage
+												for (i =0; i<20; i++) {
+													if (dif>=colors[i].p1 && dif < colors[i].p2) {
+														return colors[i].color;
+													}
+												}
+												/*
+												if (state.D_Percentage>state.R_Percentage) {
+													return "Blue";
+												}
+												else if (state.D_Percentage<state.R_Percentage)	{
+													return "Red";
+												}
+												else {
+													return "Magenta";
+												}
+												*/
+											});
+						g.append("text")
+						.attr("x", 32.5)
+						.attr("y", 27.5)
+						.attr("dy", "0em")
+						.attr('text-anchor', 'middle')
+						.text(function(state) {return state.Abbreviation})
+						.style("fill", "white")
+						.attr("pointer-events", "none");
+						g.append("text")
+						.attr("x", 32.5)
+						.attr("y", 27.5)
+						.attr("dy", "1em")
+						.attr('text-anchor', 'middle')
+						.text(function(state) {return state.Total_EV})
+						.style("fill", "white")
+						.attr("pointer-events", "none");
+						g.selectAll("rect")
+							.on("mouseenter", function(state) {
+								hovering
+								.style("position", "absolute")
+								.style("background", "lightsteelblue")
+								.style("opacity", .9)
+								.style("width", "230px")
+								.style("height", "60px")
+								.style("text-align", "center")
+								.style("border-radius", "8px")
+								.style("border", "0px")
+								.style("font", "12px sans-serif");
+									var matrix = this.getScreenCTM()
+													.translate(+ this.getAttribute("cx"), + this.getAttribute("cy"));
+								hovering	
+								.html(state.State + " (" + state.Total_EV + " EV) <br>" + state.D_Nominee + ":" + state.D_Votes + "(" + state.D_Percentage + "%) <br>" + state.R_Nominee +  ":" + state.R_Votes + "(" + state.R_Percentage + "%)")	
+								.style("left", (window.pageXOffset + matrix.e) +"px")		
+								.style("top", (window.pageYOffset + matrix.f) + 65 + "px");	
+							})
+							.on("mouseleave", function(d) {		
+							hovering		
+								.style("opacity", 0);	
+						});
+						
+						/*
+							var states = svgContainer.selectAll("rect")
+													 .data(data)
+													 .enter()
+													 .append("rect");
+							var stateAttributes = states
+													.attr("x", function(state) {return 80+70*state.x})
+													.attr("y", function(state) {return 40+60*state.y})
+													.attr("width", 65)
+													.attr("height", 55)
+													.attr("fill", function(state) {
+														if (state.D_Percentage>state.R_Percentage) {
+															return "Blue";
+														}
+														else if (state.D_Percentage<state.R_Percentage)	{
+															return "Red";
+														}
+														else {
+															return "Magenta";
+														}
+													});
+													console.log(data);
+												*/
+												});
+						});
+					}); 
+				};
+
+        </script>
+    </body>
+</html>    
