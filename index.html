@@ -9,10 +9,13 @@
 	</style>
     <body>
         <script type="text/javascript">
+		
+		var map = d3.geoAlbersUsa();
+		var mapPath = d3.geoPath().projection(map);
 				var svgContainer = d3.select("body").append("svg")
 									.attr("width", 1000)
 									.attr("height", 800);
-									// Create scale
+				// Create scale
 				var xScale = d3.scaleLinear()
 							   .domain([1940, 2016])
 							   .range([50, 950]);
@@ -111,7 +114,96 @@
 						console.log("reached");
 						d3.csv("data/colors.csv", function(colors) {
 							console.log(colors);
-							svgContainer.selectAll(".rect")
+							d3.json("data/states.json", function(error, jsonStates) {
+							if (error) throw error;
+							console.log(jsonStates);
+							for (var i = 0; i<electionData.length; i++) {
+								var electionDataState = electionData[i].State
+								//console.log(electionDataState);
+								console.log(jsonStates.features[0].properties.name == "Alabama");
+								for (var j =0; j<jsonStates.features.length; j++) {
+									if (jsonStates.features[j].properties.name == electionDataState) {
+										jsonStates.features[j].properties.Abbreviation = electionData[i].Abbreviation;
+										jsonStates.features[j].properties.Total_EV = electionData[i].Total_EV;
+										jsonStates.features[j].properties.D_Nominee = electionData[i].D_Nominee;
+										jsonStates.features[j].properties.D_Percentage = electionData[i].D_Percentage;
+										jsonStates.features[j].properties.D_Votes = electionData[i].D_Votes;
+										jsonStates.features[j].properties.R_Nominee = electionData[i].R_Nominee;
+										jsonStates.features[j].properties.R_Percentage = electionData[i].R_Percentage;
+										jsonStates.features[j].properties.R_Votes = electionData[i].R_Votes;
+									}
+								}
+							}
+							svgContainer.selectAll(".path")
+								.data(jsonStates.features)
+								.enter()
+								.append("path")
+								.attr("d", mapPath)
+								.attr("fill", function(state) {
+									if(state.properties.R_Percentage>0) {
+										var dif = state.properties.R_Percentage-state.properties.D_Percentage
+										for (i =0; i<20; i++) {
+											if (dif>=colors[i].p1 && dif < colors[i].p2) {
+												return colors[i].color;
+											}
+										}
+									}
+									return "white";
+								})
+								.on("mouseenter", function(state) {
+									hovering
+									.style("position", "absolute")
+									.style("background", "lightsteelblue")
+									.style("opacity", .9)
+									.style("width", "230px")
+									.style("height", "60px")
+									.style("text-align", "center")
+									.style("border-radius", "8px")
+									.style("border", "0px")
+									.style("font", "12px sans-serif");
+										var matrix = this.getScreenCTM()
+														.translate(+ this.getAttribute("cx"), + this.getAttribute("cy"));
+									hovering	
+									.html(state.properties.name + " (" + state.properties.Total_EV + " EV) <br>" + state.properties.D_Nominee + ":" + state.properties.D_Votes + "(" + state.properties.D_Percentage + "%) <br>" + state.properties.R_Nominee +  ":" + state.properties.R_Votes + "(" + state.properties.R_Percentage + "%)")	
+									.style("left", (mapPath.bounds(state)[0][0]) +"px")		
+									.style("top", (mapPath.bounds(state)[0][1]) + 120 + "px");	
+								})
+								.on("mouseleave", function(d) {		
+									hovering		
+										.style("opacity", 0);	
+									});
+								svgContainer.selectAll(".text")
+								.data(jsonStates.features)
+								.enter()
+								.append("text")
+								.attr("x", function(state) {
+								var loc = mapPath.centroid(state);
+								return loc[0];})
+								.attr("y", function(state) {
+									var loc = mapPath.centroid(state);
+									return loc[1];})
+								.attr("dy", "0em")
+								.attr('text-anchor', 'middle')
+								.text(function(state) {return state.properties.Abbreviation})
+								.style("fill", "black")
+								.attr("pointer-events", "none");
+								svgContainer.selectAll(".text")
+								.data(jsonStates.features)
+								.enter()
+								.append("text")
+								.attr("x", function(state) {
+								var loc = mapPath.centroid(state);
+								return loc[0];})
+								.attr("y", function(state) {
+									var loc = mapPath.centroid(state);
+									return loc[1]+13;})
+								.attr("dy", "0em")
+								.attr('text-anchor', 'middle')
+								.text(function(state) {return state.properties.Total_EV})
+								.style("fill", "black")
+								.attr("pointer-events", "none");
+							});
+				svgContainer.selectAll(".rect")
 								.data(colors)
 								.enter()
 								.append("rect")
@@ -133,6 +225,7 @@
 								.style("fill", "Black")
 								.attr("pointer-events", "none")
 								.style("font", "8px sans-serif");
+								/* HERE
 				electionData.forEach(function(state) {
 							var result = coordinateMap.filter(function(stateCode) {
 								return stateCode.code == state.Abbreviation;
@@ -171,6 +264,7 @@
 													return "Magenta";
 												}
 												*/
+												/* HERE
 											});
 						g.append("text")
 						.attr("x", 32.5)
@@ -237,11 +331,12 @@
 												});
 												*/
 						console.log(electionData);
+						
 										});
 					});
 				}); 
 				function onClick(tick) {
-					svgContainer.selectAll("rect").remove();
+					svgContainer.selectAll("path").remove();
 					svgContainer.selectAll("image").remove();
 					d3.selectAll(".tick text").style("fill", "black").style("text-decoration", null);
 					d3.select(this).style("fill", "magenta").style("text-decoration", "underline");
@@ -256,11 +351,100 @@
 					svgContainer.append("svg:image").attr("x", 800).attr("y", 400).attr("width", 150).attr("height", 210).attr("xlink:href", result[0].Link);
 				});
 					d3.csv("data/coordinates.csv", function(coordinateMap) {
-						d3.csv("data/election-results-" + selectedTick.textContent + ".csv", function(electionData) {
-							console.log("reached");
-							d3.csv("data/colors.csv", function(colors) {
+					d3.csv("data/election-results-" + selectedTick.textContent + ".csv", function(electionData) {
+						console.log("reached");
+						d3.csv("data/colors.csv", function(colors) {
 							console.log(colors);
-							svgContainer.selectAll(".rect")
+							d3.json("data/states.json", function(error, jsonStates) {
+							if (error) throw error;
+							console.log(jsonStates);
+							for (var i = 0; i<electionData.length; i++) {
+								var electionDataState = electionData[i].State
+								//console.log(electionDataState);
+								console.log(jsonStates.features[0].properties.name == "Alabama");
+								for (var j =0; j<jsonStates.features.length; j++) {
+									if (jsonStates.features[j].properties.name == electionDataState) {
+										jsonStates.features[j].properties.Abbreviation = electionData[i].Abbreviation;
+										jsonStates.features[j].properties.Total_EV = electionData[i].Total_EV;
+										jsonStates.features[j].properties.D_Nominee = electionData[i].D_Nominee;
+										jsonStates.features[j].properties.D_Percentage = electionData[i].D_Percentage;
+										jsonStates.features[j].properties.D_Votes = electionData[i].D_Votes;
+										jsonStates.features[j].properties.R_Nominee = electionData[i].R_Nominee;
+										jsonStates.features[j].properties.R_Percentage = electionData[i].R_Percentage;
+										jsonStates.features[j].properties.R_Votes = electionData[i].R_Votes;
+									}
+								}
+							}
+							svgContainer.selectAll(".path")
+								.data(jsonStates.features)
+								.enter()
+								.append("path")
+								.attr("d", mapPath)
+								.attr("fill", function(state) {
+									if(state.properties.R_Percentage>0) {
+										var dif = state.properties.R_Percentage-state.properties.D_Percentage
+										for (i =0; i<20; i++) {
+											if (dif>=colors[i].p1 && dif < colors[i].p2) {
+												return colors[i].color;
+											}
+										}
+									}
+									return "white";
+								})
+								.on("mouseenter", function(state) {
+									hovering
+									.style("position", "absolute")
+									.style("background", "lightsteelblue")
+									.style("opacity", .9)
+									.style("width", "230px")
+									.style("height", "60px")
+									.style("text-align", "center")
+									.style("border-radius", "8px")
+									.style("border", "0px")
+									.style("font", "12px sans-serif");
+										var matrix = this.getScreenCTM()
+														.translate(+ this.getAttribute("cx"), + this.getAttribute("cy"));
+									hovering	
+									.html(state.properties.name + " (" + state.properties.Total_EV + " EV) <br>" + state.properties.D_Nominee + ":" + state.properties.D_Votes + "(" + state.properties.D_Percentage + "%) <br>" + state.properties.R_Nominee +  ":" + state.properties.R_Votes + "(" + state.properties.R_Percentage + "%)")	
+									.style("left", (mapPath.bounds(state)[0][0]) +"px")		
+									.style("top", (mapPath.bounds(state)[0][1]) + 120 + "px");	
+								})
+								.on("mouseleave", function(d) {		
+									hovering		
+										.style("opacity", 0);	
+									});
+								svgContainer.selectAll(".text")
+								.data(jsonStates.features)
+								.enter()
+								.append("text")
+								.attr("x", function(state) {
+								var loc = mapPath.centroid(state);
+								return loc[0];})
+								.attr("y", function(state) {
+									var loc = mapPath.centroid(state);
+									return loc[1];})
+								.attr("dy", "0em")
+								.attr('text-anchor', 'middle')
+								.text(function(state) {return state.properties.Abbreviation})
+								.style("fill", "black")
+								.attr("pointer-events", "none");
+								svgContainer.selectAll(".text")
+								.data(jsonStates.features)
+								.enter()
+								.append("text")
+								.attr("x", function(state) {
+								var loc = mapPath.centroid(state);
+								return loc[0];})
+								.attr("y", function(state) {
+									var loc = mapPath.centroid(state);
+									return loc[1]+13;})
+								.attr("dy", "0em")
+								.attr('text-anchor', 'middle')
+								.text(function(state) {return state.properties.Total_EV})
+								.style("fill", "black")
+								.attr("pointer-events", "none");
+							});
+				svgContainer.selectAll(".rect")
 								.data(colors)
 								.enter()
 								.append("rect")
@@ -270,15 +454,27 @@
 								.attr("height", 20)
 								.attr("fill", function(state) {return (state.color).toString()})
 								.attr("pointer-events", "none");
-							electionData.forEach(function(state) {
-								var result = coordinateMap.filter(function(stateCode) {
-									return stateCode.code == state.Abbreviation;
-								});
-								state.x = (result[0]!== undefined) ? result[0].x : null;
-								state.y = (result[0]!== undefined) ? result[0].y : null;
+							svgContainer.selectAll(".text")
+								.data(colors)
+								.enter()
+								.append("text")
+								.attr("x", function(state) {return (24+state.index*49).toString()})
+								.attr("y", 660)
+								.attr("dy", "0em")
+								.attr('text-anchor', 'middle')
+								.text(function(state) {return state.p1 + "% to " + state.p2 + "%"})
+								.style("fill", "Black")
+								.attr("pointer-events", "none")
+								.style("font", "8px sans-serif");
+								/* HERE
+				electionData.forEach(function(state) {
+							var result = coordinateMap.filter(function(stateCode) {
+								return stateCode.code == state.Abbreviation;
 							});
-							
-													var g = svgContainer.selectAll(".g")
+							state.x = (result[0]!== undefined) ? result[0].x : null;
+							state.y = (result[0]!== undefined) ? result[0].y : null;
+						});
+						var g = svgContainer.selectAll(".g")
 											.data(electionData)
 											.enter()
 											.append("g")
@@ -293,14 +489,13 @@
 											.attr("width", 65)
 											.attr("height", 55)
 											.attr("fill", function(state) {
-											var dif = state.R_Percentage-state.D_Percentage
+												var dif = state.R_Percentage-state.D_Percentage
 												for (i =0; i<20; i++) {
 													if (dif>=colors[i].p1 && dif < colors[i].p2) {
 														return colors[i].color;
 													}
 												}
-												/*
-												if (state.D_Percentage>state.R_Percentage) {
+												/*if (state.D_Percentage>state.R_Percentage) {
 													return "Blue";
 												}
 												else if (state.D_Percentage<state.R_Percentage)	{
@@ -310,6 +505,7 @@
 													return "Magenta";
 												}
 												*/
+												/* HERE
 											});
 						g.append("text")
 						.attr("x", 32.5)
@@ -351,32 +547,35 @@
 								.style("opacity", 0);	
 						});
 						
-						/*
-							var states = svgContainer.selectAll("rect")
-													 .data(data)
-													 .enter()
-													 .append("rect");
-							var stateAttributes = states
-													.attr("x", function(state) {return 80+70*state.x})
-													.attr("y", function(state) {return 40+60*state.y})
-													.attr("width", 65)
-													.attr("height", 55)
-													.attr("fill", function(state) {
-														if (state.D_Percentage>state.R_Percentage) {
-															return "Blue";
-														}
-														else if (state.D_Percentage<state.R_Percentage)	{
-															return "Red";
-														}
-														else {
-															return "Magenta";
-														}
-													});
-													console.log(data);
-												*/
+											
+												 /*
+						var states = svgContainer.selectAll("rect")
+												 .data(electionData)
+												 .enter()
+												 .append("rect");
+												
+						var stateAttributes = states
+												.attr("x", function(state) {return 80+70*state.x})
+												.attr("y", function(state) {return 40+60*state.y})
+												.attr("width", 65)
+												.attr("height", 55)
+												.attr("fill", function(state) {
+													if (state.D_Percentage>state.R_Percentage) {
+														return "Blue";
+													}
+													else if (state.D_Percentage<state.R_Percentage)	{
+														return "Red";
+													}
+													else {
+														return "Magenta";
+													}
 												});
-						});
-					}); 
+												*/
+						console.log(electionData);
+						
+										});
+					});
+				}); 
 				};
 
         </script>
