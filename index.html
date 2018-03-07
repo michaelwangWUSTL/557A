@@ -34,8 +34,16 @@
 				  .style("font-size", "15px")
 				  .attr("transform"," translate(0,10)");
 				var selectedTick = d3.selectAll(".tick text").nodes()[0];
+
 				d3.select(selectedTick).style("fill", "magenta").style("text-decoration", "underline");
-				
+				d3.csv("/data/images.csv", function(images) {
+					var result = images.filter(function(year) {
+						return year.Year == selectedTick.textContent;
+						console.log(year);
+					});
+					console.log(result[0]);
+					svgContainer.append("svg:image").attr("x", 800).attr("y", 300).attr("width", 150).attr("height", 210).attr("xlink:href", result[0].Link);
+				});
 				d3.csv("/data/yearwise-winner.csv", function(yearwiseWinner) {
 					var ticks = d3.select("#xaxis").selectAll(".tick");
 					ticks.each(function() { 
