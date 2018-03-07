@@ -36,15 +36,15 @@
 				var selectedTick = d3.selectAll(".tick text").nodes()[0];
 
 				d3.select(selectedTick).style("fill", "magenta").style("text-decoration", "underline");
-				d3.csv("/data/images.csv", function(images) {
+				d3.csv("data/images.csv", function(images) {
 					var result = images.filter(function(year) {
 						return year.Year == selectedTick.textContent;
 						console.log(year);
 					});
 					console.log(result[0]);
-					svgContainer.append("svg:image").attr("x", 800).attr("y", 300).attr("width", 150).attr("height", 210).attr("xlink:href", result[0].Link);
+					svgContainer.append("svg:image").attr("x", 800).attr("y", 400).attr("width", 150).attr("height", 210).attr("xlink:href", result[0].Link);
 				});
-				d3.csv("/data/yearwise-winner.csv", function(yearwiseWinner) {
+				d3.csv("data/yearwise-winner.csv", function(yearwiseWinner) {
 					var ticks = d3.select("#xaxis").selectAll(".tick");
 					ticks.each(function() { 
 						if (yearwiseWinner[(parseInt(this.textContent)-1940)/4].PARTY == "D") {
@@ -106,10 +106,10 @@
 				var hovering = d3.select("body").append("div")	
 							.attr("class", "tooltip")				
 							.style("opacity", 0);
-				d3.csv("/data/coordinates.csv", function(coordinateMap) {
-					d3.csv("/data/election-results-" + selectedTick.textContent + ".csv", function(electionData) {
+				d3.csv("data/coordinates.csv", function(coordinateMap) {
+					d3.csv("data/election-results-" + selectedTick.textContent + ".csv", function(electionData) {
 						console.log("reached");
-						d3.csv("/data/colors.csv", function(colors) {
+						d3.csv("data/colors.csv", function(colors) {
 							console.log(colors);
 							svgContainer.selectAll(".rect")
 								.data(colors)
@@ -242,12 +242,21 @@
 				}); 
 				function onClick(tick) {
 					svgContainer.selectAll("rect").remove();
+					svgContainer.selectAll("image").remove();
 					d3.selectAll(".tick text").style("fill", "black").style("text-decoration", null);
 					d3.select(this).style("fill", "magenta").style("text-decoration", "underline");
 					selectedTick = this;
 					console.log(selectedTick.textContent);
-					d3.csv("/data/coordinates.csv", function(coordinateMap) {
-						d3.csv("/data/election-results-" + selectedTick.textContent + ".csv", function(electionData) {
+					d3.csv("data/images.csv", function(images) {
+					var result = images.filter(function(year) {
+						return year.Year == selectedTick.textContent;
+						console.log(year);
+					});
+					console.log(result[0]);
+					svgContainer.append("svg:image").attr("x", 800).attr("y", 400).attr("width", 150).attr("height", 210).attr("xlink:href", result[0].Link);
+				});
+					d3.csv("data/coordinates.csv", function(coordinateMap) {
+						d3.csv("data/election-results-" + selectedTick.textContent + ".csv", function(electionData) {
 							console.log("reached");
 							d3.csv("/data/colors.csv", function(colors) {
 							console.log(colors);
