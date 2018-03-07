@@ -258,7 +258,7 @@
 					d3.csv("data/coordinates.csv", function(coordinateMap) {
 						d3.csv("data/election-results-" + selectedTick.textContent + ".csv", function(electionData) {
 							console.log("reached");
-							d3.csv("/data/colors.csv", function(colors) {
+							d3.csv("data/colors.csv", function(colors) {
 							console.log(colors);
 							svgContainer.selectAll(".rect")
 								.data(colors)
